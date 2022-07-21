@@ -11,7 +11,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # connect to client
 client.connect((target_host, target_port))
 # send data
-client.send(b"GET / HTTP/1.1\r\nHost: Hi server!\r\n\r\n")
+client.send(b"GET / HTTP/1.1\r\nHost: Hi Server!\r\n\r\n")
 
 response = client.recv(4096)
 print(response.decode('utf8'))
