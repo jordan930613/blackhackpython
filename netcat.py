@@ -21,6 +21,38 @@ class NetCat:
         else:
             self.send()
 
+    def send(self):
+        # connect to the target and port
+        self.socket.connect((self.args.target, self.args.port))
+        # if we have buffer, we send that to the target first
+        if self.buffer:
+            self.socket.send(self.buffer)
+        
+        # set up try/catch block so we can manually close the connection with CTRL-C
+        try:
+            recv_len = 1
+            response = ''
+            # receive data from target
+            while recv_len:
+                data = self.socket.recv(4096)
+                recv_len = len(data)
+                response += data.decode()
+                # no more data
+                if recv_len < 4096:
+                    break
+            # print response
+            if response:
+                print(response)
+                buffer = input('>')
+                buffer += '\n'
+                self.socket.send(buffer.encode())
+        except KeyboardInterrupt:
+            print('User terminated.')
+            self.socket.close()
+            sys.exit()
+    
+    
+
 def execute(cmd):
     cmd = cmd.strip()
     if not cmd:
