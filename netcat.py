@@ -6,6 +6,15 @@ import subprocess
 import sys
 import textwrap
 import threading
+from urllib import response
+
+def execute(cmd):
+    cmd = cmd.strip()
+    if not cmd:
+        return 
+    output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
+
+    return output.decode()
 
 class NetCat:
     def __init__(self, args, buffer=None):
@@ -61,13 +70,42 @@ class NetCat:
             )
             client_thread.start()
 
-def execute(cmd):
-    cmd = cmd.strip()
-    if not cmd:
-        return 
-    output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
+    def handle(self, client_socket):
+        if self.args.execute:
+            output = execute(self.args.execute)
+            client_socket.send(output.encode())
+        
+        elif self.args.upload:
+            # set up a loop to listen for content on the listening socket and receive data until there's no more data coming in.
+            file_buffer = b''
+            while True:
+                data = client_socket.recv(4096)
+                if data:
+                    file_buffer += data
+                else:
+                    break
+            
+            # write the content to the specified file
+            with open(self.args.upload, 'wb') as f:
+                f.write(file_buffer)
+            message = f'Saved file {self.args.upload}'
+            client_socket.send(message.encode())
 
-    return output.decode()
+        elif self.args.command:
+            cmd_buffer = b''
+            while True:
+                try:
+                    client_socket.send(b'BHP: #> ')
+                    while '\n' not in cmd_buffer.decode():
+                        cmd_buffer += client_socket.recv(64)
+                    response = execute(cmd_buffer.decode())
+                    if response:
+                        client_socket.send(response.encode())
+                    cmd_buffer = b''
+                except Exception as e:
+                    print(f'server killed {e}')
+                    self.socket.close()
+                    sys.exit()
 
 if __name__ == '__main__':
     # argparse module use for create a command line interface
